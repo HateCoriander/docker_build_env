@@ -1,5 +1,8 @@
 #!/bin/sh
 
+RELEASE=1.0.0
+LOCAL="https://github.com/HateCoriander/docker_build_env/releases/download/local-images-v$RELEASE/luckfox_pico.tar"
+
 HOSTNAME=luckfoxPico
 TIMEOUT=300	# %d seconds
 IMAGES="ghcr.io/hatecoriander/luckfox_pico:latest"
@@ -23,10 +26,24 @@ echo "Info: Update docker images from $IMAGES ..."
 timeout $TIMEOUT docker pull $IMAGES
 STATUS=$?
 if [ $STATUS -eq 124 ]; then
-    echo "Error: Please check network, docker pull timeout!"
-    exit $STATUS
+    echo "Warning: Please check network, docker pull timeout!"
 elif [ $STATUS -ne 0 ]; then
-    echo "Error: Please make sure images exist!"
+    echo "Warning: Please make sure images exist!"
+fi
+
+echo "Info: Download local images archived file from https"
+wget -P $TOPDIR $LOCAL
+STATUS=$?
+if [ $STATUS -ne 0 ]; then
+    echo "Error: Download images failed!"
+    exit $STATUS
+fi
+
+echo "Info: Try to load images to tar"
+docker load -i luckfox_pico.tar
+STATUS=$?
+if [ $STATUS -ne 0 ]; then
+    echo "Error: Load images failed!"
     exit $STATUS
 fi
 
