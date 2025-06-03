@@ -6,11 +6,18 @@ LOCAL="https://github.com/HateCoriander/docker_build_env/releases/download/local
 HOSTNAME=luckfoxPico
 TIMEOUT=300	# %d seconds
 IMAGES="ghcr.io/hatecoriander/luckfox_pico:latest"
-PASSWD="/etc/passwd"
-GROUP="/etc/group"
 
-DOCKERID=$(sed -n 's/^docker:[^:]*:\([^:]*\):.*$/\1/p' /etc/group)
 TOPDIR=$(dirname $(realpath $0))
+SUDOGROUP=$(grep -i sudo $TOPDIR/group.in | cut -d':' -f3)
+
+PASSWD="/etc/passwd"
+PASSWDTMP="$TOPDIR/passwd.in"
+PASSWDOVERLAY="$TOPDIR/passwd.overlay"
+
+GROUP="/etc/group"
+GROUPTMP="$TOPDIR/group.in"
+GROUPOVERLAY="$TOPDIR/group.overlay"
+
 SHADOW="/etc/shadow"
 SHADOWTMP="$TOPDIR/shadow.in"
 SHADOWOVERLAY="$TOPDIR/shadow.overlay"
@@ -20,6 +27,17 @@ STATUS=1
 if ! which docker > /dev/null 2>&1; then
     echo "Error: Please try again after installed docker!"
     exit $STATUS
+fi
+
+if [ ! -f $PASSWDTMP ]; then
+    echo "Error: Could not found $PASSWDTMP, please exec 'git pull'"
+    exit 1
+elif [ ! -f $GROUPTMP ]; then
+    echo "Error: Could not found $GROUPTMP, please exec 'git pull'"
+    exit 1
+elif [ ! -f $SHADOWTMP ]; then
+    echo "Error: Could not found $SHADOWTMP, please exec 'git pull'"
+    exit 1
 fi
 
 echo "Info: Update docker images from $IMAGES ..."
@@ -49,15 +67,21 @@ if [ $STATUS -ne 0 ]; then
     fi
 fi
 
+echo "Info: Generate the passwd of the overlay"
+sed -e "s/<user>/$(id -un)/g" -e "s/<user_id>/$(id -u)/g" $PASSWDTMP > $PASSWDOVERLAY
+
+echo "Info: Generate the group of the overlay"
+sed -e "s/<user>/$(id -un)/g" -e "s/<user_id>/$(id -u)/g" $GROUPTMP > $GROUPOVERLAY
+
 echo "Info: Generate the shadow of the overlay"
 sed "s/<user>/$(id -un)/g" $SHADOWTMP > $SHADOWOVERLAY
 
 echo -e "Info: Enter container for uid:$(id -u) gid:$(id -g) user:$(id -un)\n"
-docker run -ti --rm --user $(id -u):$(id -g) --group-add $DOCKERID \
+docker run -ti --rm --user $(id -u):$(id -g) --group-add $SUDOGROUP \
 	--hostname $HOSTNAME --workdir $HOME \
 	-v $HOME:$HOME \
-	-v $PASSWD:$PASSWD:ro \
-	-v $GROUP:$GROUP:ro \
+	-v $PASSWDOVERLAY:$PASSWD:ro \
+	-v $GROUPOVERLAY:$GROUP:ro \
 	-v $SHADOWOVERLAY:$SHADOW:ro \
 	$IMAGES /bin/bash
 
