@@ -31,20 +31,22 @@ elif [ $STATUS -ne 0 ]; then
     echo "Warning: Please make sure images exist!"
 fi
 
-echo "Info: Download local images archived file from https"
-wget -P $TOPDIR $LOCAL
-STATUS=$?
 if [ $STATUS -ne 0 ]; then
-    echo "Error: Download images failed!"
-    exit $STATUS
-fi
+    echo "Info: Download local images archived file from https"
+    wget -P $TOPDIR $LOCAL
+    STATUS=$?
+    if [ $STATUS -ne 0 ]; then
+        echo "Error: Download images failed!"
+        exit $STATUS
+    fi
 
-echo "Info: Try to load images to tar"
-docker load -i luckfox_pico.tar
-STATUS=$?
-if [ $STATUS -ne 0 ]; then
-    echo "Error: Load images failed!"
-    exit $STATUS
+    echo "Info: Try to load images to tar"
+    docker load -i luckfox_pico.tar
+    STATUS=$?
+    if [ $STATUS -ne 0 ]; then
+        echo "Error: Load images failed!"
+        exit $STATUS
+    fi
 fi
 
 echo "Info: Generate the shadow of the overlay"
