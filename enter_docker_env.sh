@@ -1,7 +1,8 @@
 #!/bin/sh
 
-RELEASE=1.0.0
-LOCAL="https://github.com/HateCoriander/docker_build_env/releases/download/local-images-v$RELEASE/luckfox_pico.tar"
+RELEASE=1.0.1
+LOCAL="https://github.com/HateCoriander/docker_build_env/releases/download/local-images-v$RELEASE/luckfox_pico.tar.gz"
+TARFILE="$(basename $LOCAL)"
 
 HOSTNAME=luckfoxPico
 TIMEOUT=300	# %d seconds
@@ -21,6 +22,8 @@ GROUPOVERLAY="$TOPDIR/group.overlay"
 SHADOW="/etc/shadow"
 SHADOWTMP="$TOPDIR/shadow.in"
 SHADOWOVERLAY="$TOPDIR/shadow.overlay"
+
+WORKDIR="$HOME/luckfox"
 
 STATUS=1
 
@@ -59,7 +62,7 @@ if [ $STATUS -ne 0 ]; then
     fi
 
     echo "Info: Try to load images to tar"
-    docker load -i luckfox_pico.tar
+    docker load -i $TARFILE
     STATUS=$?
     if [ $STATUS -ne 0 ]; then
         echo "Error: Load images failed!"
@@ -76,10 +79,13 @@ sed -e "s/<user>/$(id -un)/g" -e "s/<user_id>/$(id -u)/g" $GROUPTMP > $GROUPOVER
 echo "Info: Generate the shadow of the overlay"
 sed "s/<user>/$(id -un)/g" $SHADOWTMP > $SHADOWOVERLAY
 
+echo "Info: Create the workspace directory"
+mkdir -p $WORKDIR
+
 echo -e "Info: Enter container for uid:$(id -u) gid:$(id -g) user:$(id -un)\n"
 docker run -ti --rm --user $(id -u):$(id -g) --group-add $SUDOGROUP \
-	--hostname $HOSTNAME --workdir $HOME \
-	-v $HOME:$HOME \
+	--hostname $HOSTNAME --workdir $WORKDIR \
+	-v $WORKDIR:$WORKDIR \
 	-v $PASSWDOVERLAY:$PASSWD:ro \
 	-v $GROUPOVERLAY:$GROUP:ro \
 	-v $SHADOWOVERLAY:$SHADOW:ro \
